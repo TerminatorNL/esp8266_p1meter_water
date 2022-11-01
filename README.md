@@ -1,18 +1,17 @@
-# esp8266_p1meter
+# esp8266_p1meter_water
 
-Software for the ESP2866 that sends P1 smart meter data to an mqtt broker (with OTA firmware updates)
+Software for the ESP2866 that sends P1 smart meter and water consumption data to an mqtt broker (with OTA firmware updates)
 
-## about this fork
-This fork (tries) to add support for the `Landys and Gyr E360` smartmeter (DSMR5.0)
-
-The ![original source](https://github.com/fliphess/esp8266_p1meter) has issues with DSMR5.0 meters who like to send telegrams every 1 second at a high 115200 baud rate. 
-This causes the used SoftwareSerial to struggle to keep up and thus only receives corrupted messages. This fork switches to using the main Hardware serial port (RX) for communication with the meter.
+## About this fork
+This fork adds support for a 5V inductieve proximity sensor switch NPN to monitor 
 
 # Getting started
 This setup requires:
 - An esp8266 (nodeMcu and Wemos d1 mini have been tested)
 - A 10k ohm resistor
 - A 4 pin RJ11 or [6 pin RJ12 cable](https://www.tinytronics.nl/shop/nl/kabels/adapters/rj12-naar-6-pins-dupont-jumper-adapter) Both cables work great, but a 6 pin cable can also power the esp8266 on most DSMR5+ meters.
+- 1 1M ohm resistor
+- [M18 8mm sensing DC 5V inductieve proximity sensor switch NPN](https://nl.aliexpress.com/item/32826218456.html)
 
 Compiling up using Arduino IDE:
 - Ensure you have selected the right board
@@ -42,7 +41,13 @@ Connect the esp8266 to an RJ11 cable/connector following the diagram.
 
 On most Landys and Gyr models a 10K resistor should be used between the ESP's 3.3v and the p1's DATA (RXD) pin. Many howto's mention RTS requires 5V (VIN) to activate the P1 port, but for me 3V3 suffices.
 
-![Wiring](https://raw.githubusercontent.com/daniel-jong/esp8266_p1meter/master/assets/esp8266_p1meter_bb.png)
+![Wiring](/assets/esp8266_p1meter_bb.png)
+
+### Connecting the proximity sensor to measure water
+Connect the `black wire` of the inductive promximity sensor switch to `pin D1` and place a 1M ohm resistor from `D1` to `GND`. The resistor serves to avoid the pin from floating. You can choose another resistance to suit your needs.
+
+### Optional water sensor mounting bracket
+Download either the [.stl](/assets/WaterMeterSensorHole.stl), [.step](/assets/WaterMeterSensorHole.step) or [.f3d](/assets/WaterMeterSensorHole.f3d) file to customize and print it.
 
 ### Optional: Powering the esp8266 using your DSMR5+ meter 
 <details><summary>Expand to see wiring description</summary>
@@ -59,7 +64,7 @@ When using a 6 pin cable you can use the power source provided by the meter.
 | 5 - RXD (data) | RX (gpio3) |
 | 6 - GND  | GND  |
 
-![Wiring powered by meter](https://raw.githubusercontent.com/daniel-jong/esp8266_p1meter/master/assets/esp8266_p1meter_bb_PoweredByMeter.png)
+![Wiring powered by meter](/assets/esp8266_p1meter_bb_PoweredByMeter.png)
 
 </p>
 </details>
@@ -70,6 +75,7 @@ All metrics are send to their own MQTT topic.
 The software sends out to the following MQTT topics:
 
 ```
+sensors/water/watermeter/pulses 0
 sensors/power/p1meter/consumption_low_tarif 2209397
 sensors/power/p1meter/consumption_high_tarif 1964962
 sensors/power/p1meter/returndelivery_low_tarif 2209397
@@ -95,10 +101,10 @@ sensors/power/p1meter/short_power_peaks 0
 
 ## Home Assistant Configuration
 
-Use this [example](https://raw.githubusercontent.com/daniel-jong/esp8266_p1meter/master/assets/p1_sensors.yaml) for home assistant's `sensor.yaml`
+Use this [example](/assets/p1_and_water_sensors.yaml) for home assistant's `sensor.yaml`
 
 The automatons are yours to create.
-And always remember that sending alerts in case of a power outtage only make sense when you own a UPS battery :)
+And always remember that sending alerts in case of a power outage only make sense when you own a UPS battery :)
 
 ## Thanks to
 
@@ -112,3 +118,5 @@ Standing on the heads of giants, big thanks and great respect to the writers and
 - http://romix.macuser.nl/software.html
 - http://blog.regout.info/category/slimmeter/
 - http://domoticx.com/p1-poort-slimme-meter-hardware/
+- https://github.com/daniel-jong/esp8266_p1meter
+- https://github.com/fliphess/esp8266_p1meter
