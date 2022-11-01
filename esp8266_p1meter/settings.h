@@ -2,6 +2,9 @@
 // * Settings                       *
 // **********************************
 
+#define WATER_METER_GPIO_INTERRUPT_PIN 5 //Pin D1
+#define WATER_METER_DEBOUNCE_MS 500 //Prevent dodgey signal triggers
+
 // Update treshold in milliseconds, messages will only be sent on this interval
 #define UPDATE_INTERVAL 60000  // 1 minute
 //#define UPDATE_INTERVAL 300000 // 5 minutes
@@ -18,10 +21,10 @@
 #define P1_MAXLINELENGTH 1050
 
 // * The hostname of our little creature
-#define HOSTNAME "p1meter"
+#define HOSTNAME "p1andwatermeter"
 
 // * The password used for OTA
-#define OTA_PASSWORD "admin"
+#define OTA_PASSWORD "kb&FFsdgsdg!2boujasd9"
 
 // * Wifi timeout in milliseconds
 #define WIFI_TIMEOUT 30000
@@ -30,7 +33,13 @@
 #define MQTT_MAX_RECONNECT_TRIES 10
 
 // * MQTT root topic
-#define MQTT_ROOT_TOPIC "sensors/power/p1meter"
+#define MQTT_P1_ROOT_TOPIC "sensors/power/p1meter"
+#define MQTT_WATER_ROOT_TOPIC "sensors/water/watermeter"
+
+// Last water meter detected time + required delay
+long WATER_DEBOUNCE_TIME = 0;
+unsigned long DETECTED_WATER_PULSES = 0;
+unsigned long SENT_WATER_PULSES = 0;
 
 // * MQTT Last reconnection counter
 long LAST_RECONNECT_ATTEMPT = 0;
