@@ -90,7 +90,8 @@ bool mqtt_reconnect()
             strcat(message, HOSTNAME);
             mqtt_client.publish("hass/status", message);
 
-            Serial.printf("MQTT root topic: %s\n", MQTT_ROOT_TOPIC);
+            Serial.printf("MQTT energy root topic: %s\n", MQTT_P1_ROOT_TOPIC);
+            Serial.printf("MQTT water root topic: %s\n", MQTT_WATER_ROOT_TOPIC);
         }
         else
         {
@@ -113,7 +114,7 @@ bool mqtt_reconnect()
     return true;
 }
 
-void send_metric(String name, long metric)
+void send_metric(String root, String name, long metric)
 {
     Serial.print(F("Sending metric to broker: "));
     Serial.print(name);
@@ -123,36 +124,36 @@ void send_metric(String name, long metric)
     char output[10];
     ltoa(metric, output, sizeof(output));
 
-    String topic = String(MQTT_ROOT_TOPIC) + "/" + name;
+    String topic = root + "/" + name;
     send_mqtt_message(topic.c_str(), output);
 }
 
-void send_data_to_broker()
+void send_P1_data_to_broker()
 {
-    send_metric("consumption_low_tarif", CONSUMPTION_LOW_TARIF);
-    send_metric("consumption_high_tarif", CONSUMPTION_HIGH_TARIF);
-    send_metric("returndelivery_low_tarif", RETURNDELIVERY_LOW_TARIF);
-    send_metric("returndelivery_high_tarif", RETURNDELIVERY_HIGH_TARIF);
-    send_metric("actual_consumption", ACTUAL_CONSUMPTION);
-    send_metric("actual_returndelivery", ACTUAL_RETURNDELIVERY);
+    send_metric(MQTT_P1_ROOT_TOPIC, "consumption_low_tarif", CONSUMPTION_LOW_TARIF);
+    send_metric(MQTT_P1_ROOT_TOPIC, "consumption_high_tarif", CONSUMPTION_HIGH_TARIF);
+    send_metric(MQTT_P1_ROOT_TOPIC, "returndelivery_low_tarif", RETURNDELIVERY_LOW_TARIF);
+    send_metric(MQTT_P1_ROOT_TOPIC, "returndelivery_high_tarif", RETURNDELIVERY_HIGH_TARIF);
+    send_metric(MQTT_P1_ROOT_TOPIC, "actual_consumption", ACTUAL_CONSUMPTION);
+    send_metric(MQTT_P1_ROOT_TOPIC, "actual_returndelivery", ACTUAL_RETURNDELIVERY);
 
-    send_metric("l1_instant_power_usage", L1_INSTANT_POWER_USAGE);
-    send_metric("l2_instant_power_usage", L2_INSTANT_POWER_USAGE);
-    send_metric("l3_instant_power_usage", L3_INSTANT_POWER_USAGE);
-    send_metric("l1_instant_power_current", L1_INSTANT_POWER_CURRENT);
-    send_metric("l2_instant_power_current", L2_INSTANT_POWER_CURRENT);
-    send_metric("l3_instant_power_current", L3_INSTANT_POWER_CURRENT);
-    send_metric("l1_voltage", L1_VOLTAGE);
-    send_metric("l2_voltage", L2_VOLTAGE);
-    send_metric("l3_voltage", L3_VOLTAGE);
+    send_metric(MQTT_P1_ROOT_TOPIC, "l1_instant_power_usage", L1_INSTANT_POWER_USAGE);
+    send_metric(MQTT_P1_ROOT_TOPIC, "l2_instant_power_usage", L2_INSTANT_POWER_USAGE);
+    send_metric(MQTT_P1_ROOT_TOPIC, "l3_instant_power_usage", L3_INSTANT_POWER_USAGE);
+    send_metric(MQTT_P1_ROOT_TOPIC, "l1_instant_power_current", L1_INSTANT_POWER_CURRENT);
+    send_metric(MQTT_P1_ROOT_TOPIC, "l2_instant_power_current", L2_INSTANT_POWER_CURRENT);
+    send_metric(MQTT_P1_ROOT_TOPIC, "l3_instant_power_current", L3_INSTANT_POWER_CURRENT);
+    send_metric(MQTT_P1_ROOT_TOPIC, "l1_voltage", L1_VOLTAGE);
+    send_metric(MQTT_P1_ROOT_TOPIC, "l2_voltage", L2_VOLTAGE);
+    send_metric(MQTT_P1_ROOT_TOPIC, "l3_voltage", L3_VOLTAGE);
     
-    send_metric("gas_meter_m3", GAS_METER_M3);
+    send_metric(MQTT_P1_ROOT_TOPIC, "gas_meter_m3", GAS_METER_M3);
 
-    send_metric("actual_tarif_group", ACTUAL_TARIF);
-    send_metric("short_power_outages", SHORT_POWER_OUTAGES);
-    send_metric("long_power_outages", LONG_POWER_OUTAGES);
-    send_metric("short_power_drops", SHORT_POWER_DROPS);
-    send_metric("short_power_peaks", SHORT_POWER_PEAKS);
+    send_metric(MQTT_P1_ROOT_TOPIC, "actual_tarif_group", ACTUAL_TARIF);
+    send_metric(MQTT_P1_ROOT_TOPIC, "short_power_outages", SHORT_POWER_OUTAGES);
+    send_metric(MQTT_P1_ROOT_TOPIC, "long_power_outages", LONG_POWER_OUTAGES);
+    send_metric(MQTT_P1_ROOT_TOPIC, "short_power_drops", SHORT_POWER_DROPS);
+    send_metric(MQTT_P1_ROOT_TOPIC, "short_power_peaks", SHORT_POWER_PEAKS);
 }
 
 // **********************************
@@ -373,6 +374,13 @@ bool decode_telegram(int len)
     {
         GAS_METER_M3 = getValue(telegram, len, '(', '*');
     }
+    
+    // 0-2:24.2.1(220518194000S)(06078.930*m3)
+    // 0-2:24.2.1 = /Ene5\XS210 ESMR 5.0
+    //if (strncmp(telegram, "0-2:24.2.1", strlen("0-2:24.2.1")) == 0)
+    //{
+    //   GAS_METER_M3 = getValue(telegram, len, '(', '*');
+    //}
 
     // 0-0:96.14.0(0001)
     // 0-0:96.14.0 = Actual Tarif
@@ -436,7 +444,7 @@ void processLine(int len) {
 
     bool result = decode_telegram(len + 1);
     if (result) {
-        send_data_to_broker();
+        send_P1_data_to_broker();
         LAST_UPDATE_SENT = millis();
     }
 }
@@ -550,6 +558,14 @@ void setup_mdns()
     }
 }
 
+ICACHE_RAM_ATTR void proximity_interrupt() {
+  long now = millis();
+  if(now > WATER_DEBOUNCE_TIME){
+    DETECTED_WATER_PULSES++;
+  }
+  WATER_DEBOUNCE_TIME = now + WATER_METER_DEBOUNCE_MS;
+}
+
 // **********************************
 // * Setup Main                     *
 // **********************************
@@ -571,6 +587,11 @@ void setup()
 
     // * Set led pin as output
     pinMode(LED_BUILTIN, OUTPUT);
+    pinMode(WATER_METER_GPIO_INTERRUPT_PIN, INPUT);
+
+    int interrupt_pin = digitalPinToInterrupt(WATER_METER_GPIO_INTERRUPT_PIN);
+    attachInterrupt(interrupt_pin, proximity_interrupt, FALLING);
+
 
     // * Start ticker with 0.5 because we start in AP mode and try to connect
     ticker.attach(0.6, tick);
@@ -687,8 +708,11 @@ void loop()
     {
         mqtt_client.loop();
     }
-    
     if (now - LAST_UPDATE_SENT > UPDATE_INTERVAL) {
         read_p1_hardwareserial();
+    }
+    if (DETECTED_WATER_PULSES != SENT_WATER_PULSES){
+      send_metric(MQTT_WATER_ROOT_TOPIC, "pulses", DETECTED_WATER_PULSES);
+      SENT_WATER_PULSES = DETECTED_WATER_PULSES;
     }
 }
