@@ -445,7 +445,7 @@ void processLine(int len) {
     bool result = decode_telegram(len + 1);
     if (result) {
         send_P1_data_to_broker();
-        LAST_UPDATE_SENT = millis();
+        NEXT_P1_UPDATE = millis() + P1_UPDATE_INTERVAL;
     }
 }
 
@@ -708,11 +708,13 @@ void loop()
     {
         mqtt_client.loop();
     }
-    if (now - LAST_UPDATE_SENT > UPDATE_INTERVAL) {
+    if (now > NEXT_P1_UPDATE) {
         read_p1_hardwareserial();
     }
-    if (DETECTED_WATER_PULSES != SENT_WATER_PULSES){
+    if (DETECTED_WATER_PULSES != SENT_WATER_PULSES || now > NEXT_WATER_UPDATE){
+      // When we detect a change in water, we notify the MQTT broker immediately.
       send_metric(MQTT_WATER_ROOT_TOPIC, "pulses", DETECTED_WATER_PULSES);
       SENT_WATER_PULSES = DETECTED_WATER_PULSES;
+      NEXT_WATER_UPDATE = now + WATER_UPDATE_INTERVAL;
     }
 }
