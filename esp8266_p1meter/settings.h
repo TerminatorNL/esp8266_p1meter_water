@@ -5,9 +5,11 @@
 #define WATER_METER_GPIO_INTERRUPT_PIN 5 //Pin D1
 #define WATER_METER_DEBOUNCE_MS 500 //Prevent dodgey signal triggers
 
-// Update treshold in milliseconds, messages will only be sent on this interval
-#define UPDATE_INTERVAL 60000  // 1 minute
-//#define UPDATE_INTERVAL 300000 // 5 minutes
+// Update treshold in milliseconds, P1 messages will only be sent on this interval
+#define P1_UPDATE_INTERVAL 60000  // 1 minute
+
+// Update threshold in milliseconds, even if no water event occurs, we still send another update.
+#define WATER_UPDATE_INTERVAL 60000  // 1 minute
 
 // * Baud rate for both hardware and software 
 #define BAUD_RATE 115200
@@ -24,7 +26,7 @@
 #define HOSTNAME "p1andwatermeter"
 
 // * The password used for OTA
-#define OTA_PASSWORD "kb&FFsdgsdg!2boujasd9"
+#define OTA_PASSWORD "checklastcommit"
 
 // * Wifi timeout in milliseconds
 #define WIFI_TIMEOUT 30000
@@ -44,7 +46,8 @@ unsigned long SENT_WATER_PULSES = 0;
 // * MQTT Last reconnection counter
 long LAST_RECONNECT_ATTEMPT = 0;
 
-long LAST_UPDATE_SENT = 0;
+long NEXT_P1_UPDATE = 0;
+long NEXT_WATER_UPDATE = 0;
 
 // * To be filled with EEPROM data
 char MQTT_HOST[64] = "";
