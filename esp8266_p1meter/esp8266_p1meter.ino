@@ -116,16 +116,23 @@ bool mqtt_reconnect()
 
 void send_metric(String root, String name, long metric)
 {
-    Serial.print(F("Sending metric to broker: "));
-    Serial.print(name);
-    Serial.print(F("="));
-    Serial.println(metric);
-
-    char output[10];
-    ltoa(metric, output, sizeof(output));
-
-    String topic = root + "/" + name;
-    send_mqtt_message(topic.c_str(), output);
+    if(metric == 0){
+        // This prevents resetting the counter by accident
+        Serial.print(F("Not sending metric to broker: "));
+        Serial.print(name);
+        Serial.println(" ... because it is 0");
+    }else{
+        Serial.print(F("Sending metric to broker: "));
+        Serial.print(name);
+        Serial.print(F("="));
+        Serial.println(metric);
+    
+        char output[10];
+        ltoa(metric, output, sizeof(output));
+    
+        String topic = root + "/" + name;
+        send_mqtt_message(topic.c_str(), output);
+    }
 }
 
 void send_P1_data_to_broker()
