@@ -114,9 +114,9 @@ bool mqtt_reconnect()
     return true;
 }
 
-void send_metric(String root, String name, long metric)
+void send_metric(String root, String name, long metric, bool allowZero)
 {
-    if(metric == 0){
+    if(!allowZero && metric == 0){
         // This prevents resetting the counter by accident
         Serial.print(F("Not sending metric to broker: "));
         Serial.print(name);
@@ -137,30 +137,30 @@ void send_metric(String root, String name, long metric)
 
 void send_P1_data_to_broker()
 {
-    send_metric(MQTT_P1_ROOT_TOPIC, "consumption_low_tarif", CONSUMPTION_LOW_TARIF);
-    send_metric(MQTT_P1_ROOT_TOPIC, "consumption_high_tarif", CONSUMPTION_HIGH_TARIF);
-    send_metric(MQTT_P1_ROOT_TOPIC, "returndelivery_low_tarif", RETURNDELIVERY_LOW_TARIF);
-    send_metric(MQTT_P1_ROOT_TOPIC, "returndelivery_high_tarif", RETURNDELIVERY_HIGH_TARIF);
-    send_metric(MQTT_P1_ROOT_TOPIC, "actual_consumption", ACTUAL_CONSUMPTION);
-    send_metric(MQTT_P1_ROOT_TOPIC, "actual_returndelivery", ACTUAL_RETURNDELIVERY);
+    send_metric(MQTT_P1_ROOT_TOPIC, "consumption_low_tarif", CONSUMPTION_LOW_TARIF, false);
+    send_metric(MQTT_P1_ROOT_TOPIC, "consumption_high_tarif", CONSUMPTION_HIGH_TARIF, false);
+    send_metric(MQTT_P1_ROOT_TOPIC, "returndelivery_low_tarif", RETURNDELIVERY_LOW_TARIF, false);
+    send_metric(MQTT_P1_ROOT_TOPIC, "returndelivery_high_tarif", RETURNDELIVERY_HIGH_TARIF, false);
+    send_metric(MQTT_P1_ROOT_TOPIC, "actual_consumption", ACTUAL_CONSUMPTION, false);
+    send_metric(MQTT_P1_ROOT_TOPIC, "actual_returndelivery", ACTUAL_RETURNDELIVERY, false);
 
-    send_metric(MQTT_P1_ROOT_TOPIC, "l1_instant_power_usage", L1_INSTANT_POWER_USAGE);
-    send_metric(MQTT_P1_ROOT_TOPIC, "l2_instant_power_usage", L2_INSTANT_POWER_USAGE);
-    send_metric(MQTT_P1_ROOT_TOPIC, "l3_instant_power_usage", L3_INSTANT_POWER_USAGE);
-    send_metric(MQTT_P1_ROOT_TOPIC, "l1_instant_power_current", L1_INSTANT_POWER_CURRENT);
-    send_metric(MQTT_P1_ROOT_TOPIC, "l2_instant_power_current", L2_INSTANT_POWER_CURRENT);
-    send_metric(MQTT_P1_ROOT_TOPIC, "l3_instant_power_current", L3_INSTANT_POWER_CURRENT);
-    send_metric(MQTT_P1_ROOT_TOPIC, "l1_voltage", L1_VOLTAGE);
-    send_metric(MQTT_P1_ROOT_TOPIC, "l2_voltage", L2_VOLTAGE);
-    send_metric(MQTT_P1_ROOT_TOPIC, "l3_voltage", L3_VOLTAGE);
+    send_metric(MQTT_P1_ROOT_TOPIC, "l1_instant_power_usage", L1_INSTANT_POWER_USAGE, false);
+    send_metric(MQTT_P1_ROOT_TOPIC, "l2_instant_power_usage", L2_INSTANT_POWER_USAGE, false);
+    send_metric(MQTT_P1_ROOT_TOPIC, "l3_instant_power_usage", L3_INSTANT_POWER_USAGE, false);
+    send_metric(MQTT_P1_ROOT_TOPIC, "l1_instant_power_current", L1_INSTANT_POWER_CURRENT, false);
+    send_metric(MQTT_P1_ROOT_TOPIC, "l2_instant_power_current", L2_INSTANT_POWER_CURRENT, false);
+    send_metric(MQTT_P1_ROOT_TOPIC, "l3_instant_power_current", L3_INSTANT_POWER_CURRENT, false);
+    send_metric(MQTT_P1_ROOT_TOPIC, "l1_voltage", L1_VOLTAGE, false);
+    send_metric(MQTT_P1_ROOT_TOPIC, "l2_voltage", L2_VOLTAGE, false);
+    send_metric(MQTT_P1_ROOT_TOPIC, "l3_voltage", L3_VOLTAGE, false);
     
-    send_metric(MQTT_P1_ROOT_TOPIC, "gas_meter_m3", GAS_METER_M3);
+    send_metric(MQTT_P1_ROOT_TOPIC, "gas_meter_m3", GAS_METER_M3, false);
 
-    send_metric(MQTT_P1_ROOT_TOPIC, "actual_tarif_group", ACTUAL_TARIF);
-    send_metric(MQTT_P1_ROOT_TOPIC, "short_power_outages", SHORT_POWER_OUTAGES);
-    send_metric(MQTT_P1_ROOT_TOPIC, "long_power_outages", LONG_POWER_OUTAGES);
-    send_metric(MQTT_P1_ROOT_TOPIC, "short_power_drops", SHORT_POWER_DROPS);
-    send_metric(MQTT_P1_ROOT_TOPIC, "short_power_peaks", SHORT_POWER_PEAKS);
+    send_metric(MQTT_P1_ROOT_TOPIC, "actual_tarif_group", ACTUAL_TARIF, true);
+    send_metric(MQTT_P1_ROOT_TOPIC, "short_power_outages", SHORT_POWER_OUTAGES, false);
+    send_metric(MQTT_P1_ROOT_TOPIC, "long_power_outages", LONG_POWER_OUTAGES, false);
+    send_metric(MQTT_P1_ROOT_TOPIC, "short_power_drops", SHORT_POWER_DROPS, false);
+    send_metric(MQTT_P1_ROOT_TOPIC, "short_power_peaks", SHORT_POWER_PEAKS, false);
 }
 
 // **********************************
@@ -435,9 +435,9 @@ void read_p1_hardwareserial()
 
         while (Serial.available())
         {
-            ESP.wdtDisable();
+            //ESP.wdtDisable();
             int len = Serial.readBytesUntil('\n', telegram, P1_MAXLINELENGTH);
-            ESP.wdtEnable(1);
+            //ESP.wdtEnable(1);
 
             processLine(len);
         }
@@ -566,11 +566,29 @@ void setup_mdns()
 }
 
 ICACHE_RAM_ATTR void proximity_interrupt() {
-  long now = millis();
+  unsigned long now = millis();
   if(now > WATER_DEBOUNCE_TIME){
     DETECTED_WATER_PULSES++;
   }
   WATER_DEBOUNCE_TIME = now + WATER_METER_DEBOUNCE_MS;
+}
+
+void update_water_flowrates(){
+  unsigned long current_second = (millis() / 1000);
+  if(current_second != WATER_FLOWRATE_SECOND){
+    WATER_FLOWRATE_SECOND = current_second;
+    unsigned int WATER_FLOWRATE_SECOND_CURRENT = current_second % WATER_FLOW_RATE_SAMPLE_DURATION_SECONDS;
+    unsigned int WATER_FLOWRATE_SECOND_OLDEST = (current_second + 1) % WATER_FLOW_RATE_SAMPLE_DURATION_SECONDS;
+    WATER_FLOWRATE_MEMORY[WATER_FLOWRATE_SECOND_CURRENT] = DETECTED_WATER_PULSES;
+    DETECTED_WATER_FLOWRATE_LITERS_PER_TIMEFRAME = DETECTED_WATER_PULSES - WATER_FLOWRATE_MEMORY[WATER_FLOWRATE_SECOND_OLDEST];
+
+    if(DETECTED_WATER_FLOWRATE_LITERS_PER_TIMEFRAME != SENT_WATER_FLOWRATE_LITERS_PER_TIMEFRAME){
+      // When we detect a change in water flow rate, we notify the MQTT broker.
+      send_metric(MQTT_WATER_ROOT_TOPIC, "flowrate_seconds", WATER_FLOW_RATE_SAMPLE_DURATION_SECONDS, true);
+      send_metric(MQTT_WATER_ROOT_TOPIC, "flowrate_sum", DETECTED_WATER_FLOWRATE_LITERS_PER_TIMEFRAME, true);
+      SENT_WATER_FLOWRATE_LITERS_PER_TIMEFRAME = DETECTED_WATER_FLOWRATE_LITERS_PER_TIMEFRAME;
+    }
+  }
 }
 
 // **********************************
@@ -594,7 +612,13 @@ void setup()
 
     // * Set led pin as output
     pinMode(LED_BUILTIN, OUTPUT);
+    pinMode(FLASH_BUTTON_PIN, INPUT_PULLUP);
     pinMode(WATER_METER_GPIO_INTERRUPT_PIN, INPUT);
+
+    // One second to reset system by holding flash.
+    delay(1000);
+
+
 
     int interrupt_pin = digitalPinToInterrupt(WATER_METER_GPIO_INTERRUPT_PIN);
     attachInterrupt(interrupt_pin, proximity_interrupt, FALLING);
@@ -622,8 +646,10 @@ void setup()
     // * WiFiManager local initialization. Once its business is done, there is no need to keep it around
     WiFiManager wifiManager;
 
-    // * Reset settings - uncomment for testing
-    // wifiManager.resetSettings();
+    // * Reset settings - uncomment if statement for testing
+    if(digitalRead(FLASH_BUTTON_PIN) == LOW){
+      wifiManager.resetSettings();
+    }
 
     // * Set callback that gets called when connecting to previous WiFi fails, and enters Access Point mode
     wifiManager.setAPCallback(configModeCallback);
@@ -683,6 +709,9 @@ void setup()
     // * Startup MDNS Service
     setup_mdns();
 
+    ESP.wdtEnable(1);
+    delay(3000);
+
     // * Setup MQTT
     Serial.printf("MQTT connecting to: %s:%s\n", MQTT_HOST, MQTT_PORT);
 
@@ -718,10 +747,10 @@ void loop()
     if (now > NEXT_P1_UPDATE) {
         read_p1_hardwareserial();
     }
-    if (DETECTED_WATER_PULSES != SENT_WATER_PULSES || now > NEXT_WATER_UPDATE){
-      // When we detect a change in water, we notify the MQTT broker immediately.
-      send_metric(MQTT_WATER_ROOT_TOPIC, "pulses", DETECTED_WATER_PULSES);
+    update_water_flowrates();
+    if (DETECTED_WATER_PULSES != SENT_WATER_PULSES){
+      // When we detect a change in water, we notify the MQTT broker.
+      send_metric(MQTT_WATER_ROOT_TOPIC, "pulses", DETECTED_WATER_PULSES, true);
       SENT_WATER_PULSES = DETECTED_WATER_PULSES;
-      NEXT_WATER_UPDATE = now + WATER_UPDATE_INTERVAL;
     }
 }
