@@ -2,14 +2,14 @@
 // * Settings                       *
 // **********************************
 
+#define FLASH_BUTTON_PIN 0
+
 #define WATER_METER_GPIO_INTERRUPT_PIN 5 //Pin D1
-#define WATER_METER_DEBOUNCE_MS 500 //Prevent dodgey signal triggers
+#define WATER_METER_DEBOUNCE_MS 2500 //Prevent dodgey signal triggers
+#define WATER_FLOW_RATE_SAMPLE_DURATION_SECONDS 30
 
 // Update treshold in milliseconds, P1 messages will only be sent on this interval
-#define P1_UPDATE_INTERVAL 60000  // 1 minute
-
-// Update threshold in milliseconds, even if no water event occurs, we still send another update.
-#define WATER_UPDATE_INTERVAL 60000  // 1 minute
+#define P1_UPDATE_INTERVAL 15000  // 15 seconds
 
 // * Baud rate for both hardware and software 
 #define BAUD_RATE 115200
@@ -41,7 +41,12 @@
 // Last water meter detected time + required delay
 long WATER_DEBOUNCE_TIME = 0;
 unsigned long DETECTED_WATER_PULSES = 0;
-unsigned long SENT_WATER_PULSES = 0;
+unsigned long SENT_WATER_PULSES = 10;
+unsigned long DETECTED_WATER_FLOWRATE_LITERS_PER_TIMEFRAME = 0;
+unsigned long SENT_WATER_FLOWRATE_LITERS_PER_TIMEFRAME = 10;
+
+unsigned long WATER_FLOWRATE_SECOND = 0;
+unsigned int WATER_FLOWRATE_MEMORY[WATER_FLOW_RATE_SAMPLE_DURATION_SECONDS] = {};
 
 // * MQTT Last reconnection counter
 long LAST_RECONNECT_ATTEMPT = 0;
